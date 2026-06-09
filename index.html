@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Informasi Sarpras & Aset Sekolah (Real-Time)</title>
+    <title>Sistem Informasi Sarpras & Aset Sekolah (Anti-Lag)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -76,9 +76,9 @@
 <header class="main-header shadow-sm">
     <div class="container text-center">
         <h1 class="fw-bold mb-1"><i class="fa-solid fa-boxes-stacked me-2"></i> SMART-ASSET PRO</h1>
-        <p class="lead mb-0 text-white-50">Sistem Informasi Manajemen Sarpras & Aset Sekolah Real-Time</p>
+        <p class="lead mb-0 text-white-50">Sistem Informasi Manajemen Sarpras & Aset Sekolah (Optimasi Beban Data)</p>
         <span class="badge bg-light text-primary mt-2 px-3 py-2 fw-semibold shadow-sm">
-            <i class="fa-solid fa-link me-1"></i> Menumpang Aman di Proyek E-Perpus
+            <i class="fa-solid fa-bolt-lightning me-1"></i> Mode Manual Refresh (Anti Nge-lag)
         </span>
     </div>
 </header>
@@ -137,7 +137,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold shadow-sm">
-                            <i class="fa-solid fa-cloud-arrow-up me-2"></i>Simpan Real-Time ke Firebase
+                            <i class="fa-solid fa-cloud-arrow-up me-2"></i>Simpan ke Database
                         </button>
                     </form>
                 </div>
@@ -150,7 +150,7 @@
                 <div class="card-body p-3">
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="searchAset" class="form-control form-control-lg fs-6" placeholder="Cari aset berdasarkan nama barang, lokasi, atau sumber dana secara instant...">
+                        <input type="text" id="searchAset" class="form-control form-control-lg fs-6" placeholder="Cari di antara data terunduh secara instant (tanpa menyedot internet)...">
                     </div>
                 </div>
             </div>
@@ -161,7 +161,12 @@
                         <i class="fa-solid fa-table-list fa-lg me-2"></i>
                         <h5 class="mb-0">Daftar Pantau Inventaris Aset Sekolah</h5>
                     </div>
-                    <span class="badge bg-primary px-3 py-2" id="totalAsetIndicator">Total: 0 Jenis Barang</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary px-3 py-2" id="totalAsetIndicator">Total: -- Jenis Barang</span>
+                        <button class="btn btn-sm btn-primary shadow-sm" id="btnRefresh" title="Ambil Data Terbaru Dari Server">
+                            <i class="fa-solid fa-arrow-rotate-right me-1"></i> Ambil Data Terbaru
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -180,8 +185,7 @@
                             <tbody id="tabelAsetBody">
                                 <tr>
                                     <td colspan="7" class="text-center text-muted p-5">
-                                        <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
-                                        Menghubungkan ke database E-Perpus & mengunduh data aset...
+                                        Silakan klik tombol <strong>"Ambil Data Terbaru"</strong> di atas untuk memuat tabel aset sekolah.
                                     </td>
                                 </tr>
                             </tbody>
@@ -195,12 +199,12 @@
 </div>
 
 <footer class="text-center text-muted my-5" style="font-size: 0.85rem;">
-    <p>© 2026 Smart-Asset Pro v1.0. Dikembangkan bersama Pak Kiswanto. Sistem Keamanan Terisolasi Node Firebase.</p>
+    <p>© 2026 Smart-Asset Pro v1.1. Dioptimalkan untuk Ribuan Data. Menumpang Aman di Proyek E-Perpus.</p>
 </footer>
 
 <script>
     // =========================================================================
-    // ⚠️ ATURAN PALING PENTING: SALIN CONFIG ASLI E-PERPUS BAPAK DI SINI ⚠️
+    // CONFIG ASLI E-PERPUS BAPAK (JANGAN LUPA DIGANTI DENGAN KUNCI ASLI)
     // =========================================================================
     const firebaseConfig = {
         apiKey: "AIzaSyAs-KUNCI-API-KEY-E-PERPUS-BAPAK",
@@ -218,11 +222,59 @@
     }
     const database = firebase.database();
     
-    // Variabel lokal untuk menampung data mentah agar fitur live pencarian bekerja super cepat
+    // Wadah lokal penampung snapshot data statis agar live-search berjalan super mulus bebas lag
     let dataLokalAset = {};
 
     // =========================================================================
-    // 1. FUNGSI MENYIMPAN DATA (CREATE)
+    // FUNGSI UTAMA AMBIL DATA SECARA MANUAL (ANTI LAG & HEMAT KUOTA)
+    // =========================================================================
+    function muatDataAsetDariServer() {
+        const tbody = document.getElementById('tabelAsetBody');
+        const btn = document.getElementById('btnRefresh');
+        
+        // Tampilkan animasi loading pada tabel & tombol
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Mengunduh...`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted p-5">
+                    <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                    Menarik cuplikan data statis dari folder sarpras_sekolah...
+                </td>
+            </tr>
+        `;
+
+        // PERBAIKAN UTAMA: Menggunakan .once() bukan .on() agar tidak membebani memori browser secara terus-menerus
+        database.ref('sarpras_sekolah').once('value').then((snapshot) => {
+            if(snapshot.exists()) {
+                dataLokalAset = snapshot.val();
+            } else {
+                dataLokalAset = {};
+            }
+            
+            // Kembalikan status tombol refresh
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-arrow-rotate-right me-1"></i> Ambil Data Terbaru`;
+            
+            // Bersihkan kolom pencarian saat refresh ditekan agar data murni muncul kembali
+            document.getElementById('searchAset').value = '';
+            // Render data ke tabel
+            renderTabelAset(dataLokalAset);
+        }).catch((error) => {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-arrow-rotate-right me-1"></i> Ambil Data Terbaru`;
+            alert("Gagal menarik data dari server Firebase: " + error.message);
+        });
+    }
+
+    // Pasang pemicu klik ke tombol refresh manual
+    document.getElementById('btnRefresh').addEventListener('click', muatDataAsetDariServer);
+
+    // Otomatis tarik data 1x saja saat halaman pertama kali selesai dimuat oleh browser
+    window.addEventListener('DOMContentLoaded', muatDataAsetDariServer);
+
+    // =========================================================================
+    // FUNGSI MENYIMPAN DATA (CREATE)
     // =========================================================================
     document.getElementById('formSarpras').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -234,10 +286,8 @@
         const lokasi = document.getElementById('lokasi').value.trim();
         const sumberDana = document.getElementById('sumberDana').value.trim();
 
-        // Membuat ID Unik berbasis waktu milidetik agar data tersusun kronologis
         const idAset = 'ASET_' + Date.now();
 
-        // MENUMPANG DENGAN AMAN: Mengunci ke node terisolasi bernama 'sarpras_sekolah'
         database.ref('sarpras_sekolah/' + idAset).set({
             nama_barang: nama,
             kategori: kategori,
@@ -246,33 +296,16 @@
             lokasi: lokasi,
             sumber_dana: sumberDana || '-'
         }).then(() => {
-            // Reset form input setelah sukses
             document.getElementById('formSarpras').reset();
-            // Kembalikan default value untuk input jumlah
             document.getElementById('jumlah').value = "1";
-            
-            // Notifikasi sukses yang elegan memakai toast bawaan browser
-            alert("🎉 Sukses! Data aset baru berhasil disimpan dan diamankan di dalam proyek gabungan Firebase.");
+            alert("🎉 Sukses! Data disimpan ke server. Silakan klik tombol 'Ambil Data Terbaru' jika ingin memperbarui tampilan tabel.");
         }).catch((error) => {
-            alert("❌ Gagal Menyimpan! Detail kendala: " + error.message);
+            alert("❌ Gagal Menyimpan: " + error.message);
         });
     });
 
     // =========================================================================
-    // 2. FUNGSI MEMBACA DATA SECARA REAL-TIME (READ)
-    // =========================================================================
-    database.ref('sarpras_sekolah').on('value', (snapshot) => {
-        if(snapshot.exists()) {
-            dataLokalAset = snapshot.val();
-        } else {
-            dataLokalAset = {};
-        }
-        // Kirim data ke fungsi perender tabel
-        renderTabelAset(dataLokalAset);
-    });
-
-    // =========================================================================
-    // 3. FUNGSI RENDERING TABEL & FILTER PENCARIAN
+    // FUNGSI RENDERING TABEL & LIVE SEARCH LOKAL (RINGAN & AMAN)
     // =========================================================================
     function renderTabelAset(dataAset, kataKunci = '') {
         const tbody = document.getElementById('tabelAsetBody');
@@ -282,11 +315,9 @@
         let counterBarang = 0;
         const keyword = kataKunci.toLowerCase().trim();
 
-        // Konversi objek database menjadi perulangan baris HTML
         Object.keys(dataAset).forEach((id) => {
             const item = dataAset[id];
             
-            // Logika Live Filter Pencarian
             const matchNama = item.nama_barang.toLowerCase().includes(keyword);
             const matchLokasi = item.lokasi.toLowerCase().includes(keyword);
             const matchDana = item.sumber_dana.toLowerCase().includes(keyword);
@@ -295,7 +326,6 @@
             if(keyword === '' || matchNama || matchLokasi || matchDana || matchKategori) {
                 counterBarang++;
 
-                // Menentukan skema warna indikator berdasarkan kondisi barang
                 let badgeStyle = 'bg-success-subtle text-success border border-success-subtle';
                 let iconKondisi = 'fa-circle-check';
                 if(item.kondisi === 'Rusak Ringan') {
@@ -332,36 +362,35 @@
             }
         });
 
-        // Update indikator kuantitas di kepala tabel
-        indicator.innerText = `Total: ${counterBarang} Jenis Barang Ditemukan`;
+        indicator.innerText = `Total: ${counterBarang} Jenis Barang`;
 
-        // Jika hasil filter atau database kosong
         if(counterBarang === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center text-muted p-5">
                         <i class="fa-solid fa-box-open fa-2xl d-block mb-3 text-black-50"></i>
-                        Tidak ditemukan data aset sekolah yang cocok atau inventaris masih kosong.
+                        Tidak ditemukan data aset sekolah yang cocok.
                     </td>
                 </tr>
             `;
         }
     }
 
-    // Event listener penangkap ketikan di kolom pencarian (Live Search)
+    // Filter live search berjalan di data lokal yang sudah terunduh (Sehingga tidak membebani server/laptop)
     document.getElementById('searchAset').addEventListener('input', function(e) {
         renderTabelAset(dataLokalAset, e.target.value);
     });
 
     // =========================================================================
-    // 4. FUNGSI MENGHAPUS DATA (DELETE)
+    // FUNGSI MENGHAPUS DATA (DELETE)
     // =========================================================================
     function hapusAset(id, namaBarang) {
-        if(confirm(`Apakah Pak Kiswanto yakin ingin menghapus data aset: "${namaBarang}" secara permanen dari server?`)) {
-            // Menghapus record secara presisi hanya pada node id yang dituju di bawah folder 'sarpras_sekolah'
+        if(confirm(`Apakah Pak Kiswanto yakin ingin menghapus data aset: "${namaBarang}"?`)) {
             database.ref('sarpras_sekolah/' + id).remove()
                 .then(() => {
-                    alert("🗑️ Data aset berhasil dihapus dari database pusat.");
+                    alert("🗑️ Data aset berhasil dihapus dari server. Menyegarkan tabel...");
+                    // Otomatis ambil data terbaru setelah menghapus agar tabel langsung bersih
+                    muatDataAsetDariServer();
                 })
                 .catch((error) => {
                     alert("Gagal menghapus data: " + error.message);
