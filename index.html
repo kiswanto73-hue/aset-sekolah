@@ -233,7 +233,7 @@
 </div>
 
 <footer class="text-center text-muted my-5" style="font-size: 0.85rem;">
-    <p>© 2026 Smart-Asset Pro v1.5. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
+    <p>© 2026 Smart-Asset Pro v1.6. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
 </footer>
 
 <script>
@@ -327,7 +327,7 @@
     document.getElementById('formSarpras').addEventListener('submit', function(e) {
         e.preventDefault();
 
-        const idAsetTerpilih = document.getElementById('editIdAset').value; // Ambil ID kalau ada
+        const idAsetTerpilih = document.getElementById('editIdAset').value;
 
         const nama = document.getElementById('namaBarang').value.trim().toUpperCase();
         const kategori = document.getElementById('kategori').value;
@@ -335,7 +335,6 @@
         const lokasi = document.getElementById('lokasi').value.trim().toUpperCase();
         const sumberDana = document.getElementById('sumberDana').value.trim().toUpperCase();
         
-        // Membaca nilai rincian pecahan masing-masing kondisi
         const baik = parseInt(document.getElementById('jumlahBaik').value) || 0;
         const rr = parseInt(document.getElementById('jumlahRusakRingan').value) || 0;
         const rb = parseInt(document.getElementById('jumlahRusakBerat').value) || 0;
@@ -346,7 +345,6 @@
             return;
         }
 
-        // Tentukan jika id kosong buat ID Baru (Input), jika ada isinya pakai ID lama tersebut (Edit)
         const targetId = idAsetTerpilih ? idAsetTerpilih : 'ASET_' + Date.now();
 
         db.ref('sarpras_sekolah/' + targetId).set({
@@ -355,11 +353,10 @@
             tahun_perolehan: tahun,
             lokasi: lokasi,
             sumber_dana: sumberDana || '-',
-            // Struktur data baru menampung pecahan kondisi terpisah
             jumlah_baik: baik,
             jumlah_rusak_ringan: rr,
             jumlah_rusak_berat: rb,
-            jumlah: totalUnit // Kompatibilitas dengan sistem pencarian unit lama
+            jumlah: totalUnit 
         }).then(() => {
             alert(idAsetTerpilih ? "Berhasil memperbarui data aset!" : "Aset baru sukses disimpan!"); 
             resetFormKeModeInput();
@@ -401,15 +398,14 @@
         document.getElementById('jumlahRusakBerat').value = item.jumlah_rusak_berat !== undefined ? item.jumlah_rusak_berat : (item.kondisi === 'Rusak Berat' ? item.jumlah : 0);
 
         hitungTotalOtomatis();
-        // Otomatis gulung layar ke kiri atas pada pengguna HP agar langsung sadar masuk menu edit
         window.scrollTo({top: 0, behavior: 'smooth'});
     }
 
+    // FIX: Memperbaiki penulisan classList agar tidak membuat browser crash lagi
     function resetFormKeModeInput() {
         document.getElementById('panelInputCard').className = "card";
         document.getElementById('judulForm').innerText = "Registrasi / Input Aset Baru";
         document.getElementById('iconForm').className = "fa-solid fa-square-plus fa-lg me-2";
-        document.getElementById('btnBatalEdit').classLamped = true;
         document.getElementById('btnBatalEdit').classList.add('d-none');
 
         document.getElementById('btnSubmitForm').className = "btn btn-primary btn-lg w-100 fw-semibold shadow-sm";
@@ -450,7 +446,6 @@
             if(keyword === '' || matchNama || matchLokasi || matchDana || matchKategori || matchTahun) {
                 counterBarang++;
 
-                // Pengolahan data rincian kondisi terpisah untuk dicetak di tabel
                 let jBaik = item.jumlah_baik !== undefined ? item.jumlah_baik : (item.kondisi === 'Baik' ? item.jumlah : 0);
                 let jRingan = item.jumlah_rusak_ringan !== undefined ? item.jumlah_rusak_ringan : (item.kondisi === 'Rusak Ringan' ? item.jumlah : 0);
                 let jBerat = item.jumlah_rusak_berat !== undefined ? item.jumlah_rusak_berat : (item.kondisi === 'Rusak Berat' ? item.jumlah : 0);
@@ -515,4 +510,19 @@
     function hapusAset(id, namaBarang) {
         if(confirm(`Apakah Pak Kiswanto yakin ingin menghapus data aset: "${namaBarang}"?`)) {
             db.ref('sarpras_sekolah/' + id).remove()
-                .then(() =>
+                .then(() => {
+                    alert("🗑️ Data aset berhasil dihapus.");
+                    if(document.getElementById('editIdAset').value === id) {
+                        resetFormKeModeInput();
+                    }
+                    muatDataAsetDariServer();
+                })
+                .catch((error) => {
+                    alert("Gagal menghapus data: " + error.message);
+                });
+        }
+    }
+</script>
+
+</body>
+</html>
