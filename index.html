@@ -76,9 +76,9 @@
 <header class="main-header shadow-sm">
     <div class="container text-center">
         <h1 class="fw-bold mb-1"><i class="fa-solid fa-boxes-stacked me-2"></i> SMART-ASSET PRO</h1>
-        <p class="lead mb-0 text-white-50">Sistem Informasi Manajemen Sarpras & Aset Sekolah (Optimasi Beban Data)</p>
+        <p class="lead mb-0 text-white-50">Sistem Informasi Manajemen Sarpras & Aset Sekolah</p>
         <span class="badge bg-light text-primary mt-2 px-3 py-2 fw-semibold shadow-sm">
-            <i class="fa-solid fa-bolt-lightning me-1"></i> Mode Manual Refresh (Anti Nge-lag)
+            <i class="fa-solid fa-bolt-lightning me-1"></i> Terhubung Aman ke Realtime Database (Asia-Southeast)
         </span>
     </div>
 </header>
@@ -137,7 +137,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold shadow-sm">
-                            <i class="fa-solid fa-cloud-arrow-up me-2"></i>Simpan ke Database
+                            <i class="fa-solid fa-cloud-arrow-up me-2"></i>Simpan ke Database 💾
                         </button>
                     </form>
                 </div>
@@ -150,7 +150,7 @@
                 <div class="card-body p-3">
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="searchAset" class="form-control form-control-lg fs-6" placeholder="Cari di antara data terunduh secara instant (tanpa menyedot internet)...">
+                        <input type="text" id="searchAset" class="form-control form-control-lg fs-6" placeholder="Cari di antara data terunduh secara instant (tanpa loading)...">
                     </div>
                 </div>
             </div>
@@ -185,7 +185,7 @@
                             <tbody id="tabelAsetBody">
                                 <tr>
                                     <td colspan="7" class="text-center text-muted p-5">
-                                        Silakan klik tombol <strong>"Ambil Data Terbaru"</strong> di atas untuk memuat tabel aset sekolah.
+                                        Silakan klik tombol <strong>"Ambil Data Terbaru"</strong> di atas untuk memuat data tabel aset.
                                     </td>
                                 </tr>
                             </tbody>
@@ -199,40 +199,33 @@
 </div>
 
 <footer class="text-center text-muted my-5" style="font-size: 0.85rem;">
-    <p>© 2026 Smart-Asset Pro v1.1. Dioptimalkan untuk Ribuan Data. Menumpang Aman di Proyek E-Perpus.</p>
+    <p>© 2026 Smart-Asset Pro v1.2. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
 </footer>
 
 <script>
     // =========================================================================
-    // CONFIG ASLI E-PERPUS BAPAK (JANGAN LUPA DIGANTI DENGAN KUNCI ASLI)
+    // 🖥️ AKURASI URL: SUDAH DISAMAKAN PERSIS DENGAN FIREBASE E-PERPUS BAPAK 📱
     // =========================================================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyAs-KUNCI-API-KEY-E-PERPUS-BAPAK",
-        authDomain: "e-perpus-bapak.firebaseapp.com",
-        databaseURL: "https://e-perpus-bapak-default-rtdb.firebaseio.com",
-        projectId: "e-perpus-bapak",
-        storageBucket: "e-perpus-bapak.appspot.com",
-        messagingSenderId: "1234567890",
-        appId: "1:123456:web:abcdefperpus"
+    const firebaseConfig = { 
+        databaseURL: "https://e-perpus-a652c-default-rtdb.asia-southeast1.firebasedatabase.app" 
     };
-
-    // Inisialisasi Firebase
+    
+    // Inisialisasi Firebase aman
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    const database = firebase.database();
+    const db = firebase.database();
     
-    // Wadah lokal penampung snapshot data statis agar live-search berjalan super mulus bebas lag
+    // Wadah penampung data lokal
     let dataLokalAset = {};
 
     // =========================================================================
-    // FUNGSI UTAMA AMBIL DATA SECARA MANUAL (ANTI LAG & HEMAT KUOTA)
+    // FUNGSI UTAMA AMBIL DATA SECARA MANUAL (ONCE / ANTI-LAG)
     // =========================================================================
     function muatDataAsetDariServer() {
         const tbody = document.getElementById('tabelAsetBody');
         const btn = document.getElementById('btnRefresh');
         
-        // Tampilkan animasi loading pada tabel & tombol
         btn.disabled = true;
         btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Mengunduh...`;
         tbody.innerHTML = `
@@ -244,21 +237,18 @@
             </tr>
         `;
 
-        // PERBAIKAN UTAMA: Menggunakan .once() bukan .on() agar tidak membebani memori browser secara terus-menerus
-        database.ref('sarpras_sekolah').once('value').then((snapshot) => {
+        // Menggunakan .once() agar ditarik satu kali saja ketika tombol diklik (bebas lag)
+        db.ref('sarpras_sekolah').once('value').then((snapshot) => {
             if(snapshot.exists()) {
                 dataLokalAset = snapshot.val();
             } else {
                 dataLokalAset = {};
             }
             
-            // Kembalikan status tombol refresh
             btn.disabled = false;
             btn.innerHTML = `<i class="fa-solid fa-arrow-rotate-right me-1"></i> Ambil Data Terbaru`;
             
-            // Bersihkan kolom pencarian saat refresh ditekan agar data murni muncul kembali
             document.getElementById('searchAset').value = '';
-            // Render data ke tabel
             renderTabelAset(dataLokalAset);
         }).catch((error) => {
             btn.disabled = false;
@@ -267,10 +257,10 @@
         });
     }
 
-    // Pasang pemicu klik ke tombol refresh manual
+    // Pemicu tombol klik refresh manual
     document.getElementById('btnRefresh').addEventListener('click', muatDataAsetDariServer);
 
-    // Otomatis tarik data 1x saja saat halaman pertama kali selesai dimuat oleh browser
+    // Otomatis memuat data pertama kali saat website dibuka oleh pengguna
     window.addEventListener('DOMContentLoaded', muatDataAsetDariServer);
 
     // =========================================================================
@@ -279,16 +269,17 @@
     document.getElementById('formSarpras').addEventListener('submit', function(e) {
         e.preventDefault();
 
-        const nama = document.getElementById('namaBarang').value.trim();
+        const nama = document.getElementById('namaBarang').value.trim().toUpperCase();
         const kategori = document.getElementById('kategori').value;
         const jumlah = document.getElementById('jumlah').value;
         const kondisi = document.getElementById('kondisi').value;
-        const lokasi = document.getElementById('lokasi').value.trim();
-        const sumberDana = document.getElementById('sumberDana').value.trim();
+        const lokasi = document.getElementById('lokasi').value.trim().toUpperCase();
+        const sumberDana = document.getElementById('sumberDana').value.trim().toUpperCase();
 
         const idAset = 'ASET_' + Date.now();
 
-        database.ref('sarpras_sekolah/' + idAset).set({
+        // Menyimpan terisolasi di folder 'sarpras_sekolah' (tidak akan menabrak folder koleksi_buku)
+        db.ref('sarpras_sekolah/' + idAset).set({
             nama_barang: nama,
             kategori: kategori,
             jumlah: parseInt(jumlah),
@@ -298,14 +289,16 @@
         }).then(() => {
             document.getElementById('formSarpras').reset();
             document.getElementById('jumlah').value = "1";
-            alert("🎉 Sukses! Data disimpan ke server. Silakan klik tombol 'Ambil Data Terbaru' jika ingin memperbarui tampilan tabel.");
+            alert("Berhasil disimpan!"); 
+            // Langsung segarkan tabel otomatis setelah sukses menyimpan data baru
+            muatDataAsetDariServer();
         }).catch((error) => {
             alert("❌ Gagal Menyimpan: " + error.message);
         });
     });
 
     // =========================================================================
-    // FUNGSI RENDERING TABEL & LIVE SEARCH LOKAL (RINGAN & AMAN)
+    // FUNGSI RENDERING TABEL & LIVE SEARCH LOKAL
     // =========================================================================
     function renderTabelAset(dataAset, kataKunci = '') {
         const tbody = document.getElementById('tabelAsetBody');
@@ -376,7 +369,7 @@
         }
     }
 
-    // Filter live search berjalan di data lokal yang sudah terunduh (Sehingga tidak membebani server/laptop)
+    // Filter pencarian instan lokal (Sangat ringan tanpa loading)
     document.getElementById('searchAset').addEventListener('input', function(e) {
         renderTabelAset(dataLokalAset, e.target.value);
     });
@@ -386,10 +379,9 @@
     // =========================================================================
     function hapusAset(id, namaBarang) {
         if(confirm(`Apakah Pak Kiswanto yakin ingin menghapus data aset: "${namaBarang}"?`)) {
-            database.ref('sarpras_sekolah/' + id).remove()
+            db.ref('sarpras_sekolah/' + id).remove()
                 .then(() => {
-                    alert("🗑️ Data aset berhasil dihapus dari server. Menyegarkan tabel...");
-                    // Otomatis ambil data terbaru setelah menghapus agar tabel langsung bersih
+                    alert("🗑️ Data aset berhasil dihapus.");
                     muatDataAsetDariServer();
                 })
                 .catch((error) => {
