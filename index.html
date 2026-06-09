@@ -252,13 +252,11 @@
 <div id="printArea" style="display:none;"></div>
 
 <footer class="text-center text-muted my-5" style="font-size: 0.85rem;">
-    <p>© 2026 Smart-Asset Pro v2.0. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
+    <p>© 2026 Smart-Asset Pro v2.1. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
 </footer>
 
 <script>
-    // =========================================================================
     // CONFIG FIREBASE
-    // =========================================================================
     const firebaseConfig = { 
         databaseURL: "https://e-perpus-a652c-default-rtdb.asia-southeast1.firebasedatabase.app" 
     };
@@ -293,9 +291,6 @@
         return total;
     }
 
-    // =========================================================================
-    // LOGIKA PENYUSUN BASE KODE INVENTARIS
-    // =========================================================================
     function generateNoInventarisOtomatis() {
         const idAsetTerpilih = document.getElementById('editIdAset').value;
         if(idAsetTerpilih) return;
@@ -317,13 +312,9 @@
         else if(kat === 'Kendaraan Dinas') kodeKat = 'KDN';
 
         const nomorUrutUnik = Math.floor(100 + Math.random() * 900);
-        // Ini adalah Base Code, nanti pas dicetak otomatis beranak jadi /1, /2, /3 dst sesuai jumlah pcs
         document.getElementById('noInventaris').value = `INV/${kodeKat}/${thn}/${nomorUrutUnik}`;
     }
 
-    // =========================================================================
-    // AMBIL DATA FROM SERVER
-    // =========================================================================
     function muatDataAsetDariServer() {
         const tbody = document.getElementById('tabelAsetBody');
         const btn = document.getElementById('btnRefresh');
@@ -385,9 +376,7 @@
         document.getElementById('lblJumlahTerpilih').innerText = count;
     }
 
-    // =========================================================================
     // SIMPAN DATA ASET
-    // =========================================================================
     document.getElementById('formSarpras').addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -431,9 +420,6 @@
         });
     });
 
-    // =========================================================================
-    // EDIT DATA ASET
-    // =========================================================================
     function pemicuEditAset(id) {
         const item = dataLokalAset[id];
         if(!item) return;
@@ -484,7 +470,7 @@
     }
 
     // =========================================================================
-    // 🚀 MASTERPIECE: FUNGSI PECAH & LIPAT GANDA AUTOMATIC QR-CODE (SANGAT SERU)
+    // 🔥 PERBAIKAN UTAMA: CETAK MULTI QR CODE KOLEKTIF DENGAN DELAY RENDER AMAN
     // =========================================================================
     function cetakKolektifTerpilih() {
         const checkboxes = document.getElementsByClassName('chkAsetSingle');
@@ -501,16 +487,20 @@
             return;
         }
 
+        // Tampilkan loading teks biar user tahu sistem sedang bekerja di latar belakang
+        const btnCetak = document.querySelector("button[onclick='cetakKolektifTerpilih()']");
+        const teksAsli = btnCetak.innerHTML;
+        btnCetak.disabled = true;
+        btnCetak.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> Memproses QR...`;
+
         const printArea = document.getElementById('printArea');
         printArea.innerHTML = '';
 
-        // Membuat Flex Kontainer Induk biar Stiker Berjajar Rapi Menghemat Lembaran Kertas
         const kontainerUtama = document.createElement('div');
         kontainerUtama.style.cssText = "display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; background: #fff; padding: 10px;";
 
         const antrianQrRender = [];
 
-        // LOOP 1: Membaca Barang Yang Dicentang Dan Melakukan Penggandaan Sesuai Jumlah Unit Fisik
         listIdTerpilih.forEach((id) => {
             const item = dataLokalAset[id];
             let jBaik = item.jumlah_baik !== undefined ? item.jumlah_baik : (item.kondisi === 'Baik' ? item.jumlah : 0);
@@ -518,10 +508,8 @@
             let jBerat = item.jumlah_rusak_berat !== undefined ? item.jumlah_rusak_berat : (item.kondisi === 'Rusak Berat' ? item.jumlah : 0);
             let totalUnitBarang = item.jumlah || (jBaik + jRingan + jBerat);
 
-            // Ganti totalUnitBarang ke 1 jika data error/kosong agar stiker minimal keluar 1
             if(totalUnitBarang <= 0) totalUnitBarang = 1;
 
-            // Proses Penggandaan Lembaran Stiker Unik dengan Ekor /1, /2, /3 dst.
             for(let i = 1; i <= totalUnitBarang; i++) {
                 const nomorUnikSpesifik = `${item.no_inventaris || 'INV/KOSONG'}/${i}`;
                 const idDivQr = `qrCodeId_${id}_un_${i}`;
@@ -535,13 +523,12 @@
                         
                         <div style="font-size: 8px; font-weight: bold; color: #0d6efd; font-family: monospace; word-break: break-all; margin-bottom: 4px;">${nomorUnikSpesifik}</div>
                         
-                        <div style="font-size: 8px; text-align: left; border-top: 1px dotted #55px; padding-top: 3px; line-height: 1.2; color: #444;">
+                        <div style="font-size: 8px; text-align: left; border-top: 1px dotted #555; padding-top: 3px; line-height: 1.2; color: #444;">
                             <b>R:</b> ${item.lokasi}<br>
                             <b>Thn:</b> ${item.tahun_perolehan || '-'}
                         </div>
                     </div>
                 `;
-                
                 kontainerUtama.innerHTML += kartuStikerHtml;
                 antrianQrRender.push({ divId: idDivQr, textQr: nomorUnikSpesifik });
             }
@@ -549,20 +536,26 @@
 
         printArea.appendChild(kontainerUtama);
 
-        // LOOP 2: Merender Gambar Kotak QR Code Menggunakan Library QRCode.js secara berurutan
-        setTimeout(() => {
-            antrianQrRender.forEach((tugas) => {
-                new QRCode(document.getElementById(tugas.divId), {
+        // Render QR Code ke DOM lokal terlebih dahulu
+        antrianQrRender.forEach((tugas) => {
+            const elemenTarget = document.getElementById(tugas.divId);
+            if (elemenTarget) {
+                new QRCode(elemenTarget, {
                     text: tugas.textQr,
-                    width: 75,
-                    height: 75,
+                    width: 85,
+                    height: 85,
                     colorDark : "#000000",
                     colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.H
                 });
-            });
+            }
+        });
 
-            // Jalankan Perintah Pembukaan Jendela Print Windows
+        // JEDA 600ms: Memastikan browser selesai menggambar file gambar QR Code secara utuh
+        setTimeout(() => {
+            btnCetak.disabled = false;
+            btnCetak.innerHTML = teksAsli;
+
             const isiStikerQrHemat = printArea.innerHTML;
             const jendelaCetak = window.open('', '_blank', 'width=850,height=650');
             jendelaCetak.document.write(`
@@ -570,20 +563,29 @@
                 <head>
                     <title>Cetak Lembar QR Code Aset - Smart-Asset Pro</title>
                     <style>
-                        body { margin: 0; padding: 15px; background: #fff; }
+                        body { margin: 0; padding: 15px; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                         @media print { body { padding: 0; } }
                     </style>
                 </head>
-                <body onload="window.print(); window.close();">
+                <body>
                     ${isiStikerQrHemat}
+                    <script>
+                        // Jeda internal popup untuk memastikan gambar ter-load sempurna di jendela baru
+                        window.onload = function() {
+                            setTimeout(function() {
+                                window.print();
+                                window.close();
+                            }, 300);
+                        };
+                    <\/script>
                 </body>
                 </html>
             `);
             jendelaCetak.document.close();
-        }, 200);
+        }, 600);
     }
 
-    // Fungsi Cetak Satuan Tapi Tetap Menggunakan Format QR CODE yang Dilipatgandakan
+    // Fungsi Cetak Satuan QR Code
     function cetakStikerBarcode(id) {
         const item = dataLokalAset[id];
         if(!item) return;
@@ -612,7 +614,7 @@
                     <div style="font-size: 9px; font-weight: bold; margin: 5px 0; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.nama_barang}</div>
                     <div id="${idDivQr}" style="display: flex; justify-content: center; margin: 8px 0;"></div>
                     <div style="font-size: 8px; font-weight: bold; color: #0d6efd; font-family: monospace; word-break: break-all; margin-bottom: 4px;">${nomorUnikSpesifik}</div>
-                    <div style="font-size: 8px; text-align: left; border-top: 1px dotted #55px; padding-top: 3px; line-height: 1.2;">
+                    <div style="font-size: 8px; text-align: left; border-top: 1px dotted #555; padding-top: 3px; line-height: 1.2;">
                         <b>R:</b> ${item.lokasi}<br>
                         <b>Thn:</b> ${item.tahun_perolehan || '-'}
                     </div>
@@ -624,35 +626,49 @@
 
         printArea.appendChild(kontainerUtama);
 
-        setTimeout(() => {
-            antrianQrRender.forEach((tugas) => {
-                new QRCode(document.getElementById(tugas.divId), {
+        antrianQrRender.forEach((tugas) => {
+            const elemenTarget = document.getElementById(tugas.divId);
+            if(elemenTarget) {
+                new QRCode(elemenTarget, {
                     text: tugas.textQr,
-                    width: 75,
-                    height: 75,
+                    width: 85,
+                    height: 85,
                     colorDark : "#000000",
                     colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.H
                 });
-            });
+            }
+        });
 
+        setTimeout(() => {
             const isiStiker = printArea.innerHTML;
             const jendelaCetak = window.open('', '_blank', 'width=800,height=600');
             jendelaCetak.document.write(`
                 <html>
-                <head><title>Cetak QR Code</title></head>
-                <body onload="window.print(); window.close();">
+                <head>
+                    <title>Cetak QR Code</title>
+                    <style>
+                        body { margin: 0; padding: 15px; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    </style>
+                </head>
+                <body>
                     ${isiStiker}
+                    <script>
+                        window.onload = function() {
+                            setTimeout(function() {
+                                window.print();
+                                window.close();
+                            }, 300);
+                        };
+                    <\/script>
                 </body>
                 </html>
             `);
             jendelaCetak.document.close();
-        }, 200);
+        }, 600);
     }
 
-    // =========================================================================
     // RENDER DATATABLE
-    // =========================================================================
     function renderTabelAset(dataAset, kataKunci = '') {
         const tbody = document.getElementById('tabelAsetBody');
         const indicator = document.getElementById('totalAsetIndicator');
