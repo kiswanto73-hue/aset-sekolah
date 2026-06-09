@@ -128,7 +128,8 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-medium text-secondary">Tahun Perolehan</label>
-                                <select id="tahunPerolehan" class="form-select"></select>
+                                <select id="tahunPerolehan" class="form-select">
+                                    </select>
                             </div>
                         </div>
 
@@ -206,12 +207,12 @@
 </div>
 
 <footer class="text-center text-muted my-5" style="font-size: 0.85rem;">
-    <p>© 2026 Smart-Asset Pro v1.3. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
+    <p>© 2026 Smart-Asset Pro v1.4. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
 </footer>
 
 <script>
     // =========================================================================
-    // 🖥️ CONFIG FIREBASE ASLI SESUAI DATA E-PERPUS BAPAK
+    // 🖥️ CONFIG FIREBASE SINKRON DENGAN ALAMAT E-PERPUS BAPAK
     // =========================================================================
     const firebaseConfig = { 
         databaseURL: "https://e-perpus-a652c-default-rtdb.asia-southeast1.firebasedatabase.app" 
@@ -223,22 +224,23 @@
     const db = firebase.database();
     let dataLokalAset = {};
 
-    // Otomatis membuat pilihan tahun dari tahun 2015 sampai tahun sekarang (2026) secara dinamis
+    // PERBAIKAN LOGIKA: Membuat pilihan tahun dari 2015 sampai 2026 dengan aman
     function buatPilihanTahun() {
         const selectTahun = document.getElementById('tahunPerolehan');
-        const tahunSekarang = new Date().getFullYear();
-        selectTahun.innerHTML = '';
-        for (let t = tahunSekarang; t >= 2015; t--) {
-            const opt = document.createElement('option');
-            opt.value = t;
-            opt.innerText = t;
-            selectTahun.appendChild(opt);
+        if (selectTahun) {
+            selectTahun.innerHTML = '';
+            const tahunSekarang = new Date().getFullYear();
+            for (let t = tahunSekarang; t >= 2015; t--) {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.innerText = t;
+                selectTahun.appendChild(opt);
+            }
         }
     }
-    buatPilihanTahun();
 
     // =========================================================================
-    // FUNGSI UTAMA AMBIL DATA SECARA MANUAL (ONCE / ANTI-LAG)
+    // FUNGSI UTAMA AMBIL DATA SECARA MANUAL (ANTI-LAG)
     // =========================================================================
     function muatDataAsetDariServer() {
         const tbody = document.getElementById('tabelAsetBody');
@@ -274,8 +276,13 @@
         });
     }
 
+    // PICU EKSEKUSI SETELAH HALAMAN SELESAI DI-RENDER TOTAL OLEH BROWSER
+    window.addEventListener('DOMContentLoaded', () => {
+        buatPilihanTahun(); // Dropdown diisi ketika komponen HTML sudah siap
+        muatDataAsetDariServer(); // Otomatis tarik sinkronisasi data dari perangkat lain
+    });
+
     document.getElementById('btnRefresh').addEventListener('click', muatDataAsetDariServer);
-    window.addEventListener('DOMContentLoaded', muatDataAsetDariServer);
 
     // =========================================================================
     // FUNGSI MENYIMPAN DATA (CREATE)
@@ -293,4 +300,120 @@
 
         const idAset = 'ASET_' + Date.now();
 
-        db.ref('sarpras_sekolah/' + idA
+        db.ref('sarpras_sekolah/' + idAset).set({
+            nama_barang: nama,
+            kategori: kategori,
+            jumlah: parseInt(jumlah),
+            kondisi: kondisi,
+            tahun_perolehan: tahun,
+            lokasi: lokasi,
+            sumber_dana: sumberDana || '-'
+        }).then(() => {
+            document.getElementById('formSarpras').reset();
+            document.getElementById('jumlah').value = "1";
+            buatPilihanTahun(); 
+            alert("Berhasil disimpan!"); 
+            muatDataAsetDariServer();
+        }).catch((error) => {
+            alert("❌ Gagal Menyimpan: " + error.message);
+        });
+    });
+
+    // =========================================================================
+    // FUNGSI RENDERING TABEL & LIVE SEARCH LOKAL
+    // =========================================================================
+    function renderTabelAset(dataAset, kataKunci = '') {
+        const tbody = document.getElementById('tabelAsetBody');
+        const indicator = document.getElementById('totalAsetIndicator');
+        tbody.innerHTML = ''; 
+        
+        let counterBarang = 0;
+        const keyword = kataKunci.toLowerCase().trim();
+
+        Object.keys(dataAset).forEach((id) => {
+            const item = dataAset[id];
+            const tahunBarang = item.tahun_perolehan ? item.tahun_perolehan.toString() : '-';
+
+            const matchNama = item.nama_barang.toLowerCase().includes(keyword);
+            const matchLokasi = item.lokasi.toLowerCase().includes(keyword);
+            const matchDana = item.sumber_dana.toLowerCase().includes(keyword);
+            const matchKategori = item.kategori.toLowerCase().includes(keyword);
+            const matchTahun = tahunBarang.toLowerCase().includes(keyword);
+
+            if(keyword === '' || matchNama || matchLokasi || matchDana || matchKategori || matchTahun) {
+                counterBarang++;
+
+                let badgeStyle = 'bg-success-subtle text-success border border-success-subtle';
+                let iconKondisi = 'fa-circle-check';
+                if(item.kondisi === 'Rusak Ringan') {
+                    badgeStyle = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                    iconKondisi = 'fa-triangle-exclamation';
+                } else if(item.kondisi === 'Rusak Berat') {
+                    badgeStyle = 'bg-danger-subtle text-danger border border-danger-subtle';
+                    iconKondisi = 'fa-circle-xmark';
+                }
+
+                const row = `
+                    <tr>
+                        <td>
+                            <div class="fw-semibold text-dark">${item.nama_barang}</div>
+                            <small class="text-muted font-monospace" style="font-size:0.75rem;">ID: ${id}</small>
+                        </td>
+                        <td><span class="text-secondary"><i class="fa-solid fa-tag me-1 text-black-50"></i>${item.kategori}</span></td>
+                        <td class="text-center fw-bold"><span class="badge bg-secondary px-2.5 py-1.5">${item.jumlah} Pcs</span></td>
+                        <td>
+                            <span class="badge badge-custom ${badgeStyle}">
+                                <i class="fa-solid ${iconKondisi} me-1"></i>${item.kondisi}
+                            </span>
+                        </td>
+                        <td><i class="fa-solid fa-location-dot text-danger me-1"></i>${item.lokasi}</td>
+                        <td class="text-center font-monospace fw-bold text-dark">${tahunBarang}</td>
+                        <td><span class="small text-muted">${item.sumber_dana}</span></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-danger border-0" title="Hapus Aset" onclick="hapusAset('${id}', '${item.nama_barang.replace(/'/g, "\\'")}')">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            }
+        });
+
+        indicator.innerText = `Total: ${counterBarang} Jenis Barang`;
+
+        if(counterBarang === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center text-muted p-5">
+                        <i class="fa-solid fa-box-open fa-2xl d-block mb-3 text-black-50"></i>
+                        Tidak ditemukan data aset sekolah yang cocok.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    document.getElementById('searchAset').addEventListener('input', function(e) {
+        renderTabelAset(dataLokalAset, e.target.value);
+    });
+
+    // =========================================================================
+    // FUNGSI MENGHAPUS DATA (DELETE)
+    // =========================================================================
+    function hapusAset(id, namaBarang) {
+        if(confirm(`Apakah Pak Kiswanto yakin ingin menghapus data aset: "${namaBarang}"?`)) {
+            db.ref('sarpras_sekolah/' + id).remove()
+                .then(() => {
+                    alert("🗑️ Data aset berhasil dihapus.");
+                    muatDataAsetDariServer();
+                })
+                .catch((error) => {
+                    alert("Gagal menghapus data: " + error.message);
+                });
+        }
+    }
+</script>
+
+</body>
+</html>
