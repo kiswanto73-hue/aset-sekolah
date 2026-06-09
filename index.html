@@ -73,11 +73,28 @@
             height: 1.25rem;
             cursor: pointer;
         }
+        /* Style area scanner agar pas di tengah */
+        #reader {
+            width: 100%;
+            max-width: 450px;
+            margin: 0 auto;
+            border: none !important;
+        }
+        #reader button {
+            background-color: #2a5298 !important;
+            color: white !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 6px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+        }
     </style>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
 
@@ -92,10 +109,24 @@
 </header>
 
 <div class="container-fluid px-md-5">
+    <div class="row d-none" id="containerScannerKamera">
+        <div class="col-12 mb-4">
+            <div class="card border-2 border-primary shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fa-solid fa-camera me-2"></i> Pemindai Kamera QR Code Aktif</h5>
+                    <button class="btn btn-sm btn-light fw-bold text-danger" onclick="tutupScannerKamera()">Tutup Kamera [X]</button>
+                </div>
+                <div class="card-body text-center p-4">
+                    <p class="text-muted small mb-3">Izinkan akses kamera browser, lalu arahkan kotak lensa ke stiker QR Code barang.</p>
+                    <div id="reader"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
-        
         <div class="col-xl-4 col-lg-5 mb-4">
-            <div class="card border-2 border-primary" id="panelInputCard" style="transition: all 0.3s ease;">
+            <div class="card" id="panelInputCard" style="transition: all 0.3s ease;">
                 <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
                         <i class="fa-solid fa-square-plus fa-lg me-2" id="iconForm"></i>
@@ -193,9 +224,18 @@
             
             <div class="card mb-3">
                 <div class="card-body p-3">
-                    <div class="search-box">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="searchAset" class="form-control form-control-lg fs-6" placeholder="Cari berdasarkan nama, lokasi, nomor inventaris, tahun, atau pendanaan...">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <div class="search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="searchAset" class="form-control form-control-lg fs-6" placeholder="Cari barang atau tempel hasil scan manual...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-lg btn-primary w-100 fs-6 fw-bold shadow-sm" id="btnBukaScanner" onclick="bukaScannerKamera()">
+                                <i class="fa-solid fa-camera me-1"></i> Buka Kamera Scan QR
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -252,7 +292,7 @@
 <div id="printArea" style="display:none;"></div>
 
 <footer class="text-center text-muted my-5" style="font-size: 0.85rem;">
-    <p>© 2026 Smart-Asset Pro v2.1. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
+    <p>© 2026 Smart-Asset Pro v2.5. Dioptimalkan untuk Cluster Asia-Southeast. Menumpang Aman di Proyek E-Perpus.</p>
 </footer>
 
 <script>
@@ -266,6 +306,7 @@
     }
     const db = firebase.database();
     let dataLokalAset = {};
+    let html5QrcodeScanner = null; // Instansi objek kamera scanner global
 
     function buatPilihanTahun() {
         const selectTahun = document.getElementById('tahunPerolehan');
@@ -443,7 +484,7 @@
 
         document.getElementById('jumlahBaik').value = item.jumlah_baik !== undefined ? item.jumlah_baik : (item.kondisi === 'Baik' ? item.jumlah : 0);
         document.getElementById('jumlahRusakRingan').value = item.jumlah_rusak_ringan !== undefined ? item.jumlah_rusak_ringan : (item.kondisi === 'Rusak Ringan' ? item.jumlah : 0);
-        document.getElementById('jumlahRusakBerat').value = item.jumlah_rusak_berat !== undefined ? item.jumlah_rusak_berat : (item.kondisi === 'Rusak Berat' ? item.jumlah : 0);
+        document.getElementById('jumlahRusakBerat').value = item.jumlah_rusak_berat !== undefined ? item.kondisi === 'Rusak Berat' ? item.jumlah : 0);
 
         hitungTotalOtomatis();
         window.scrollTo({top: 0, behavior: 'smooth'});
@@ -470,7 +511,74 @@
     }
 
     // =========================================================================
-    // 🔥 PERBAIKAN UTAMA: CETAK MULTI QR CODE KOLEKTIF DENGAN DELAY RENDER AMAN
+    // 🛠️ FUNGSI BARU: AKTIVASI KAMERA SCANNER QR (LIVE)
+    // =========================================================================
+    function bukaScannerKamera() {
+        document.getElementById('containerScannerKamera').classList.remove('d-none');
+        window.scrollTo({top: 0, behavior: 'smooth'});
+
+        if (!html5QrcodeScanner) {
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                fps: 15, 
+                qrbox: { width: 250, height: 250 },
+                rememberLastUsedCamera: true
+            }, false);
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // Bunyi beep buatan browser singkat saat scan sukses
+        try {
+            let context = new (window.AudioContext || window.webkitAudioContext)();
+            let oscillator = context.createOscillator();
+            oscillator.type = "sine";
+            oscillator.frequency.value = 1200;
+            oscillator.connect(context.destination);
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 120);
+        } catch(e) {}
+
+        // Potong ujung nomor ekor urut stiker (misal: INV/ELK/2026/123/5 menjadi INV/ELK/2026/123)
+        // Biar baris induk barangnya langsung otomatis tersaring ketemu di tabel!
+        let kodePencarian = decodedText;
+        if (decodedText.includes('/')) {
+            let potongan = decodedText.split('/');
+            if (potongan.length > 4) {
+                potongan.pop(); // Buang nomor urut ekor (/1, /2, dst)
+                kodePencarian = potongan.join('/');
+            }
+        }
+
+        // Masukkan hasil scan ke kolom cari lalu jalankan penyaringan
+        document.getElementById('searchAset').value = kodePencarian;
+        renderTabelAset(dataLokalAset, kodePencarian);
+
+        // Tutup kembali kamera otomatis demi menghemat baterai HP
+        tutupScannerKamera();
+    }
+
+    function onScanFailure(error) {
+        // Biarkan kosong agar tidak membanjiri log error browser saat kamera mendeteksi area kosong
+    }
+
+    function tutupScannerKamera() {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear().then(() => {
+                html5QrcodeScanner = null;
+                document.getElementById('containerScannerKamera').classList.add('d-none');
+            }).catch(err => {
+                document.getElementById('containerScannerKamera').classList.add('d-none');
+                html5QrcodeScanner = null;
+            });
+        } else {
+            document.getElementById('containerScannerKamera').classList.add('d-none');
+        }
+    }
+
+    // =========================================================================
+    // CETAK MULTI QR CODE KOLEKTIF DENGAN DELAY RENDER
     // =========================================================================
     function cetakKolektifTerpilih() {
         const checkboxes = document.getElementsByClassName('chkAsetSingle');
@@ -487,7 +595,6 @@
             return;
         }
 
-        // Tampilkan loading teks biar user tahu sistem sedang bekerja di latar belakang
         const btnCetak = document.querySelector("button[onclick='cetakKolektifTerpilih()']");
         const teksAsli = btnCetak.innerHTML;
         btnCetak.disabled = true;
@@ -536,7 +643,6 @@
 
         printArea.appendChild(kontainerUtama);
 
-        // Render QR Code ke DOM lokal terlebih dahulu
         antrianQrRender.forEach((tugas) => {
             const elemenTarget = document.getElementById(tugas.divId);
             if (elemenTarget) {
@@ -551,7 +657,6 @@
             }
         });
 
-        // JEDA 600ms: Memastikan browser selesai menggambar file gambar QR Code secara utuh
         setTimeout(() => {
             btnCetak.disabled = false;
             btnCetak.innerHTML = teksAsli;
@@ -570,7 +675,6 @@
                 <body>
                     ${isiStikerQrHemat}
                     <script>
-                        // Jeda internal popup untuk memastikan gambar ter-load sempurna di jendela baru
                         window.onload = function() {
                             setTimeout(function() {
                                 window.print();
@@ -585,7 +689,6 @@
         }, 600);
     }
 
-    // Fungsi Cetak Satuan QR Code
     function cetakStikerBarcode(id) {
         const item = dataLokalAset[id];
         if(!item) return;
