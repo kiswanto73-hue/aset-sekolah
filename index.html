@@ -444,7 +444,7 @@
     });
 
     // =========================================================================
-    // 🔥 PERBAIKAN TOTAL: MODUL KAMERA SCANNER JSQR (ANTI BLOCK)
+    // MODUL KAMERA SCANNER JSQR (ANTI BLOCK)
     // =========================================================================
     function bukaScannerKamera() {
         const container = document.getElementById('containerScannerKamera');
@@ -473,7 +473,7 @@
         const canvas = document.getElementById('hiddenCanvas');
         
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            const ctx = canvas.getContext('2ctx', {意志: true}) || canvas.getContext('2d');
+            const ctx = canvas.getContext('2d');
             canvas.height = video.videoHeight;
             canvas.width = video.videoWidth;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -533,9 +533,9 @@
             if(keyword === '' || item.nama_barang.toLowerCase().includes(keyword) || item.lokasi.toLowerCase().includes(keyword) || noInvBarang.toLowerCase().includes(keyword)) {
                 counterBarang++;
 
-                let jBaik = item.jumlah_baik !== undefined ? item.jumlah_baik : (item.kondisi === 'Baik' ? item.jumlah : 0);
-                let jRingan = item.jumlah_rusak_ringan !== undefined ? item.jumlah_rusak_ringan : (item.kondisi === 'Rusak Ringan' ? item.jumlah : 0);
-                let jBerat = item.jumlah_rusak_berat !== undefined ? item.jumlah_rusak_berat : (item.kondisi === 'Rusak Berat' ? item.jumlah : 0);
+                let jBaik = item.jumlah_baik !== undefined ? item.jumlah_baik : 0;
+                let jRingan = item.jumlah_rusak_ringan !== undefined ? item.jumlah_rusak_ringan : 0;
+                let jBerat = item.jumlah_rusak_berat !== undefined ? item.jumlah_rusak_berat : 0;
                 let totalSebut = item.jumlah || (jBaik + jRingan + jBerat);
 
                 let badgeRincianHtml = '';
@@ -562,9 +562,9 @@
                         <td><span class="small text-muted fw-medium">${item.sumber_dana}</span></td>
                         <td class="text-center">
                             <div class="d-flex gap-1 justify-content-center">
-                                <button class="btn btn-sm btn-outline-info border-0 text-info fw-bold" onclick="cetakStikerBarcode('${id}')"><i class="fa-solid fa-qrcode"></i></button>
-                                <button class="btn btn-sm btn-outline-primary border-0" onclick="pemicuEditAset('${id}')"><i class="fa-solid fa-pencil"></i></button>
-                                <button class="btn btn-sm btn-outline-danger border-0" onclick="hapusAset('${id}', '${item.nama_barang}')"><i class="fa-solid fa-trash-can"></i></button>
+                                <button class="btn btn-sm btn-outline-info border-0 text-info fw-bold" onclick="cetakStikerBarcode('${id}')" title="Cetak Barcode Unik Per Item"><i class="fa-solid fa-qrcode"></i></button>
+                                <button class="btn btn-sm btn-outline-primary border-0" onclick="pemicuEditAset('${id}')" title="Edit Jenis Aset"><i class="fa-solid fa-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger border-0" onclick="hapusAset('${id}', '${item.nama_barang}')" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -592,87 +592,151 @@
         document.getElementById('jumlahBaik').value = item.jumlah_baik || 0;
         document.getElementById('jumlahRusakRingan').value = item.jumlah_rusak_ringan || 0;
         document.getElementById('jumlahRusakBerat').value = item.jumlah_rusak_berat || 0;
+        
+        document.getElementById('judulForm').innerText = "Mode Edit Data Aset";
+        document.getElementById('iconForm').className = "fa-solid fa-pen-to-square fa-lg me-2";
+        document.getElementById('btnBatalEdit').classList.remove('d-none');
+        document.getElementById('panelInputCard').style.border = "2px solid #ffc107";
+        document.getElementById('textSubmitBtn').innerText = "Perbarui Data 💾";
+        
         hitungTotalOtomatis();
     }
 
     function resetFormKeModeInput() {
         document.getElementById('formSarpras').reset();
         document.getElementById('editIdAset').value = "";
+        document.getElementById('judulForm').innerText = "Registrasi / Input Aset Baru";
+        document.getElementById('iconForm').className = "fa-solid fa-square-plus fa-lg me-2";
+        document.getElementById('btnBatalEdit').classList.add('d-none');
+        document.getElementById('panelInputCard').style.border = "none";
+        document.getElementById('textSubmitBtn').innerText = "Simpan ke Database 💾";
         buatPilihanTahun();
         hitungTotalOtomatis();
     }
 
     function hapusAset(id, nama) {
-        if(confirm(`Hapus ${nama}?`)) {
-            db.ref('sarpras_sekolah/' + id).remove().then(() => { muatDataAsetDariServer(); });
+        if(confirm(`Apakah Anda yakin ingin menghapus aset "${nama}"?`)) {
+            db.ref('sarpras_sekolah/' + id).remove().then(() => { 
+                resetFormKeModeInput();
+                muatDataAsetDariServer(); 
+            });
         }
     }
 
-    // FORMAT CETAK BARCODE INDIVIDUAL & KOLEKTIF
+    // =========================================================================
+    // 🔥 PERBAIKAN UTAMA: MODUL CETAK QR CODE SEBAGAI ITEM UNIK PER UNIT RIIL
+    // =========================================================================
     function cetakStikerBarcode(id) {
         const item = dataLokalAset[id];
         if(!item) return;
+        
         const printArea = document.getElementById('printArea');
         printArea.innerHTML = '';
+        
         const kontainer = document.createElement('div');
-        kontainer.style.cssText = "display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;";
+        kontainer.style.cssText = "display: flex; flex-wrap: wrap; gap: 15px; justify-content: start; padding: 10px;";
         
-        const nomorUnikSpesifik = `${item.no_inventaris || 'INV/KOSONG'}/1`;
-        const idDivQr = `qrSingle_${id}`;
+        let jBaik = item.jumlah_baik !== undefined ? parseInt(item.jumlah_baik) : 0;
+        let jRingan = item.jumlah_rusak_ringan !== undefined ? parseInt(item.jumlah_rusak_ringan) : 0;
+        let jBerat = item.jumlah_rusak_berat !== undefined ? parseInt(item.jumlah_rusak_berat) : 0;
+        let totalUnitAset = item.jumlah || (jBaik + jRingan + jBerat);
         
-        kontainer.innerHTML = `
-            <div style="width: 200px; padding: 10px; border: 2px dashed #333; text-align: center; background: #fff;">
-                <div style="font-size: 10px; font-weight: bold; border-bottom: 1px solid #000;">INVENTARIS SEKOLAH</div>
-                <div style="font-size: 9px; font-weight: bold; margin: 5px 0;">${item.nama_barang}</div>
+        if(totalUnitAset <= 0) totalUnitAset = 1; 
+
+        const daftarIdQr = [];
+
+        // Looping untuk membuat label unik /001, /002 sesuai jumlah unit fisik
+        for (let i = 1; i <= totalUnitAset; i++) {
+            const nomorUrutSufiks = i.toString().padStart(3, '0'); 
+            const nomorUnikSpesifik = `${item.no_inventaris || 'INV/KOSONG'}/${nomorUrutSufiks}`;
+            const idDivQr = `qr_${id}_unit_${i}`;
+            
+            const kartuLabel = document.createElement('div');
+            kartuLabel.style.cssText = "width: 180px; padding: 10px; border: 2px dashed #333; text-align: center; background: #fff; page-break-inside: avoid;";
+            kartuLabel.innerHTML = `
+                <div style="font-size: 10px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">INVENTARIS SEKOLAH</div>
+                <div style="font-size: 9px; font-weight: bold; margin: 5px 0; height: 25px; overflow: hidden; text-overflow: ellipsis;">${item.nama_barang}</div>
                 <div id="${idDivQr}" style="display: flex; justify-content: center; margin: 8px 0;"></div>
-                <div style="font-size: 8px; font-weight: bold; color: #0d6efd;">${nomorUnikSpesifik}</div>
-            </div>
-        `;
+                <div style="font-size: 8px; font-weight: bold; color: #0d6efd; font-family: monospace;">${nomorUnikSpesifik}</div>
+            `;
+            kontainer.appendChild(kartuLabel);
+            daftarIdQr.push({ idElement: idDivQr, textQr: nomorUnikSpesifik });
+        }
+        
         printArea.appendChild(kontainer);
-        new QRCode(document.getElementById(idDivQr), { text: nomorUnikSpesifik, width: 85, height: 85 });
+        
+        // Render QR Code grafisnya menggunakan qrcode.min.js
+        daftarIdQr.forEach(target => {
+            new QRCode(document.getElementById(target.idElement), { text: target.textQr, width: 85, height: 85 });
+        });
 
         setTimeout(() => {
-            const jendelaCetak = window.open('', '_blank', 'width=800,height=600');
-            jendelaCetak.document.write(`<html><body>${printArea.innerHTML}<script>window.onload=function(){window.print();window.close();};<\/script></body></html>`);
+            const jendelaCetak = window.open('', '_blank', 'width=850,height=600');
+            jendelaCetak.document.write(`<html><head><title>Cetak Barcode Unik</title></head><body style="margin:0; background:#fff;">${printArea.innerHTML}<script>window.onload=function(){window.print();window.close();};<\/script></body></html>`);
             jendelaCetak.document.close();
-        }, 500);
+        }, 600);
     }
 
     function cetakKolektifTerpilih() {
         const checkboxes = document.getElementsByClassName('chkAsetSingle');
         const printArea = document.getElementById('printArea');
         printArea.innerHTML = '';
+        
         const kontainer = document.createElement('div');
-        kontainer.style.cssText = "display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;";
+        kontainer.style.cssText = "display: flex; flex-wrap: wrap; gap: 15px; justify-content: start; padding: 10px;";
+        
+        const daftarIdQr = [];
+        let adaDataTerpilih = false;
 
-        let adaData = false;
-        for (let i = 0; i < checkboxes.length; i++) {
-            if(checkboxes[i].checked) {
-                adaData = true;
-                const id = checkboxes[i].value;
+        for (let idx = 0; idx < checkboxes.length; idx++) {
+            if (checkboxes[idx].checked) {
+                adaDataTerpilih = true;
+                const id = checkboxes[idx].value;
                 const item = dataLokalAset[id];
-                const idDivQr = `qrKolektif_${id}`;
-                kontainer.innerHTML += `
-                    <div style="width: 200px; padding: 10px; border: 2px dashed #333; text-align: center; background: #fff;">
-                        <div style="font-size: 10px; font-weight: bold; border-bottom: 1px solid #000;">INVENTARIS SEKOLAH</div>
-                        <div style="font-size: 9px; font-weight: bold; margin: 5px 0;">${item.nama_barang}</div>
+                if (!item) continue;
+
+                let jBaik = item.jumlah_baik !== undefined ? parseInt(item.jumlah_baik) : 0;
+                let jRingan = item.jumlah_rusak_ringan !== undefined ? parseInt(item.jumlah_rusak_ringan) : 0;
+                let jBerat = item.jumlah_rusak_berat !== undefined ? parseInt(item.jumlah_rusak_berat) : 0;
+                let totalUnitAset = item.jumlah || (jBaik + jRingan + jBerat);
+                if(totalUnitAset <= 0) totalUnitAset = 1;
+
+                for (let i = 1; i <= totalUnitAset; i++) {
+                    const nomorUrutSufiks = i.toString().padStart(3, '0');
+                    const nomorUnikSpesifik = `${item.no_inventaris || 'INV/KOSONG'}/${nomorUrutSufiks}`;
+                    const idDivQr = `qr_kolektif_${id}_unit_${i}`;
+                    
+                    const kartuLabel = document.createElement('div');
+                    kartuLabel.style.cssText = "width: 180px; padding: 10px; border: 2px dashed #333; text-align: center; background: #fff; page-break-inside: avoid;";
+                    kartuLabel.innerHTML = `
+                        <div style="font-size: 10px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">INVENTARIS SEKOLAH</div>
+                        <div style="font-size: 9px; font-weight: bold; margin: 5px 0; height: 25px; overflow: hidden; text-overflow: ellipsis;">${item.nama_barang}</div>
                         <div id="${idDivQr}" style="display: flex; justify-content: center; margin: 8px 0;"></div>
-                        <div style="font-size: 8px; font-weight: bold; color: #0d6efd;">${item.no_inventaris}/1</div>
-                    </div>
-                `;
-                printArea.appendChild(kontainer);
-                setTimeout(() => { new QRCode(document.getElementById(idDivQr), { text: `${item.no_inventaris}/1`, width: 85, height: 85 }); }, 50);
+                        <div style="font-size: 8px; font-weight: bold; color: #0d6efd; font-family: monospace;">${nomorUnikSpesifik}</div>
+                    `;
+                    kontainer.appendChild(kartuLabel);
+                    daftarIdQr.push({ idElement: idDivQr, textQr: nomorUnikSpesifik });
+                }
             }
         }
 
-        if(!adaData) { alert("Centang barang dahulu!"); return; }
+        if (!adaDataTerpilih) {
+            alert("Silakan pilih minimal satu barang melalui checkbox di tabel!");
+            return;
+        }
+
+        printArea.appendChild(kontainer);
+        
+        daftarIdQr.forEach(target => {
+            new QRCode(document.getElementById(target.idElement), { text: target.textQr, width: 85, height: 85 });
+        });
 
         setTimeout(() => {
-            const jendelaCetak = window.open('', '_blank', 'width=850,height=650');
-            jendelaCetak.document.write(`<html><body>${printArea.innerHTML}<script>window.onload=function(){window.print();window.close();};<\/script></body></html>`);
+            const jendelaCetak = window.open('', '_blank', 'width=850,height=600');
+            jendelaCetak.document.write(`<html><head><title>Cetak Barcode Kolektif</title></head><body style="margin:0; background:#fff;">${printArea.innerHTML}<script>window.onload=function(){window.print();window.close();};<\/script></body></html>`);
             jendelaCetak.document.close();
         }, 600);
     }
 </script>
 </body>
-</html> 
+</html>
