@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Informasi Sarpras & Aset Sekolah (A4 - 48 Barcodes Max)</title>
+    <title>Sistem Informasi Sarpras & Aset Sekolah (Auto-Camera Activation)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -378,10 +378,16 @@
         });
     }
 
+    // TRIGGER UTAMA SAAT HALAMAN SELESAI DIMUAT (AUTO OPEN CAMERA)
     window.addEventListener('load', () => {
         buatPilihanTahun();
         hitungTotalOtomatis();
         muatDataAsetDariServer();
+        
+        // Pemicu otomatis tanpa nunggu klik tombol
+        setTimeout(() => {
+            bukaScannerKamera();
+        }, 800);
     });
 
     function toggleSemuaCheckboxes(master) {
@@ -436,11 +442,11 @@
         });
     });
 
+    // SISTEM AKSES KAMERA HP LANGSUNG
     function bukaScannerKamera() {
         const container = document.getElementById('containerScannerKamera');
         const video = document.getElementById('previewVideo');
         container.classList.remove('d-none');
-        window.scrollTo({top: 0, behavior: 'smooth'});
 
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
         .then(function(stream) {
@@ -452,7 +458,7 @@
             requestAnimationFrame(jalankanLoopPemindaian);
         })
         .catch(function(err) {
-            alert("Kamera gagal diakses! Pastikan browser diberi izin: " + err.message);
+            console.log("Kamera belum diaktifkan/diizinkan oleh user: " + err.message);
         });
     }
 
@@ -610,9 +616,6 @@
         }
     }
 
-    // =========================================================================
-    // CSS & HTML ENGINE: FORMAT 4 KOLOM x 12 BARIS = 48 STIKER PER HALAMAN A4
-    // =========================================================================
     const BUNDLE_STYLE_PRINT = `
         <style>
             @page {
