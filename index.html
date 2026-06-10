@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Informasi Sarpras & Aset Sekolah (Fix Total)</title>
+    <title>Sistem Informasi Sarpras & Aset Sekolah (A4 - 48 Barcodes Max)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -73,7 +73,6 @@
             height: 1.25rem;
             cursor: pointer;
         }
-        /* Style area scanner video */
         #scannerVideoContainer {
             position: relative;
             width: 100%;
@@ -223,7 +222,6 @@
         </div>
 
         <div class="col-xl-8 col-lg-7">
-            
             <div class="card mb-3">
                 <div class="card-body p-3">
                     <div class="row g-2">
@@ -286,7 +284,6 @@
                     </div>
                 </div>
             </div>
-            
         </div>
     </div>
 </div>
@@ -298,7 +295,6 @@
 </footer>
 
 <script>
-    // CONFIG FIREBASE
     const firebaseConfig = { 
         databaseURL: "https://e-perpus-a652c-default-rtdb.asia-southeast1.firebasedatabase.app" 
     };
@@ -309,7 +305,6 @@
     const db = firebase.database();
     let dataLokalAset = {};
     
-    // Variabel Kendali Video Scanner Stream
     let videoStream = null;
     let pemindaianAktif = false;
 
@@ -383,7 +378,6 @@
         });
     }
 
-    // PEMICU UTAMA SAAT HALAMAN SELESAI DIMUAT
     window.addEventListener('load', () => {
         buatPilihanTahun();
         hitungTotalOtomatis();
@@ -407,7 +401,6 @@
         document.getElementById('lblJumlahTerpilih').innerText = count;
     }
 
-    // SIMPAN DATA ASET
     document.getElementById('formSarpras').addEventListener('submit', function(e) {
         e.preventDefault();
         const idAsetTerpilih = document.getElementById('editIdAset').value;
@@ -443,9 +436,6 @@
         });
     });
 
-    // =========================================================================
-    // MODUL KAMERA SCANNER JSQR (ANTI BLOCK)
-    // =========================================================================
     function bukaScannerKamera() {
         const container = document.getElementById('containerScannerKamera');
         const video = document.getElementById('previewVideo');
@@ -485,8 +475,6 @@
 
             if (code) {
                 pemindaianAktif = false;
-                
-                // Proses pengolahan string hasil scan
                 let kodePencarian = code.data;
                 if (code.data.includes('/')) {
                     let pecahan = code.data.split('/');
@@ -516,7 +504,6 @@
         document.getElementById('containerScannerKamera').classList.add('d-none');
     }
 
-    // RENDER DATATABLE
     function renderTabelAset(dataAset, kataKunci = '') {
         const tbody = document.getElementById('tabelAsetBody');
         const indicator = document.getElementById('totalAsetIndicator');
@@ -624,8 +611,93 @@
     }
 
     // =========================================================================
-    // 🔥 PERBAIKAN UTAMA: MODUL CETAK QR CODE SEBAGAI ITEM UNIK PER UNIT RIIL
+    // CSS & HTML ENGINE: FORMAT 4 KOLOM x 12 BARIS = 48 STIKER PER HALAMAN A4
     // =========================================================================
+    const BUNDLE_STYLE_PRINT = `
+        <style>
+            @page {
+                size: A4 portrait;
+                margin: 6mm 5mm 5mm 5mm;
+            }
+            body {
+                margin: 0;
+                background: #fff;
+                font-family: 'Arial', sans-serif;
+            }
+            .grid-a4 {
+                display: grid;
+                grid-template-columns: repeat(4, 48.5mm);
+                grid-auto-rows: 23.5mm;
+                gap: 2mm 1.5mm;
+                justify-content: center;
+                page-break-after: always;
+            }
+            .stiker-box {
+                box-sizing: border-box;
+                width: 48.5mm;
+                height: 23.5mm;
+                border: 0.5px dashed #bbb;
+                padding: 1.5mm;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                background: #fff;
+                overflow: hidden;
+                position: relative;
+            }
+            .stiker-info {
+                width: 63%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: left;
+            }
+            .stiker-title {
+                font-size: 6.5pt;
+                font-weight: bold;
+                border-bottom: 0.5px solid #000;
+                padding-bottom: 1px;
+                letter-spacing: 0.2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .stiker-name {
+                font-size: 6pt;
+                font-weight: bold;
+                margin: 2px 0;
+                line-height: 1.1;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+                height: 14px;
+                text-transform: uppercase;
+            }
+            .stiker-code {
+                font-size: 5pt;
+                font-weight: bold;
+                font-family: monospace;
+                color: #1e3c72;
+                word-break: break-all;
+                line-height: 1;
+                margin-top: 1px;
+            }
+            .stiker-qr {
+                width: 35%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .stiker-qr img {
+                display: block;
+                max-width: 100%;
+                height: auto;
+            }
+        </style>
+    `;
+
     function cetakStikerBarcode(id) {
         const item = dataLokalAset[id];
         if(!item) return;
@@ -633,46 +705,55 @@
         const printArea = document.getElementById('printArea');
         printArea.innerHTML = '';
         
-        const kontainer = document.createElement('div');
-        kontainer.style.cssText = "display: flex; flex-wrap: wrap; gap: 15px; justify-content: start; padding: 10px;";
+        const mainContainer = document.createElement('div');
+        let currentGrid = document.createElement('div');
+        currentGrid.className = "grid-a4";
+        mainContainer.appendChild(currentGrid);
         
         let jBaik = item.jumlah_baik !== undefined ? parseInt(item.jumlah_baik) : 0;
         let jRingan = item.jumlah_rusak_ringan !== undefined ? parseInt(item.jumlah_rusak_ringan) : 0;
         let jBerat = item.jumlah_rusak_berat !== undefined ? parseInt(item.jumlah_rusak_berat) : 0;
         let totalUnitAset = item.jumlah || (jBaik + jRingan + jBerat);
-        
         if(totalUnitAset <= 0) totalUnitAset = 1; 
 
         const daftarIdQr = [];
+        let totalStikerDibuat = 0;
 
-        // Looping untuk membuat label unik /001, /002 sesuai jumlah unit fisik
         for (let i = 1; i <= totalUnitAset; i++) {
+            if (totalStikerDibuat > 0 && totalStikerDibuat % 48 === 0) {
+                currentGrid = document.createElement('div');
+                currentGrid.className = "grid-a4";
+                mainContainer.appendChild(currentGrid);
+            }
+
             const nomorUrutSufiks = i.toString().padStart(3, '0'); 
             const nomorUnikSpesifik = `${item.no_inventaris || 'INV/KOSONG'}/${nomorUrutSufiks}`;
             const idDivQr = `qr_${id}_unit_${i}`;
             
             const kartuLabel = document.createElement('div');
-            kartuLabel.style.cssText = "width: 180px; padding: 10px; border: 2px dashed #333; text-align: center; background: #fff; page-break-inside: avoid;";
+            kartuLabel.className = "stiker-box";
             kartuLabel.innerHTML = `
-                <div style="font-size: 10px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">INVENTARIS SEKOLAH</div>
-                <div style="font-size: 9px; font-weight: bold; margin: 5px 0; height: 25px; overflow: hidden; text-overflow: ellipsis;">${item.nama_barang}</div>
-                <div id="${idDivQr}" style="display: flex; justify-content: center; margin: 8px 0;"></div>
-                <div style="font-size: 8px; font-weight: bold; color: #0d6efd; font-family: monospace;">${nomorUnikSpesifik}</div>
+                <div class="stiker-info">
+                    <div class="stiker-title">INVENTARIS SEKOLAH</div>
+                    <div class="stiker-name">${item.nama_barang}</div>
+                    <div class="stiker-code">${nomorUnikSpesifik}</div>
+                </div>
+                <div class="stiker-qr" id="${idDivQr}"></div>
             `;
-            kontainer.appendChild(kartuLabel);
+            currentGrid.appendChild(kartuLabel);
             daftarIdQr.push({ idElement: idDivQr, textQr: nomorUnikSpesifik });
+            totalStikerDibuat++;
         }
         
-        printArea.appendChild(kontainer);
+        printArea.appendChild(mainContainer);
         
-        // Render QR Code grafisnya menggunakan qrcode.min.js
         daftarIdQr.forEach(target => {
-            new QRCode(document.getElementById(target.idElement), { text: target.textQr, width: 85, height: 85 });
+            new QRCode(document.getElementById(target.idElement), { text: target.textQr, width: 55, height: 55 });
         });
 
         setTimeout(() => {
-            const jendelaCetak = window.open('', '_blank', 'width=850,height=600');
-            jendelaCetak.document.write(`<html><head><title>Cetak Barcode Unik</title></head><body style="margin:0; background:#fff;">${printArea.innerHTML}<script>window.onload=function(){window.print();window.close();};<\/script></body></html>`);
+            const jendelaCetak = window.open('', '_blank', 'width=900,height=700');
+            jendelaCetak.document.write(`<html><head><title>Cetak Barcode Unik (A4-48)</title>${BUNDLE_STYLE_PRINT}</head><body>${printArea.innerHTML}<script>window.onload=function(){window.print();window.close();};<\/script></body></html>`);
             jendelaCetak.document.close();
         }, 600);
     }
@@ -682,11 +763,14 @@
         const printArea = document.getElementById('printArea');
         printArea.innerHTML = '';
         
-        const kontainer = document.createElement('div');
-        kontainer.style.cssText = "display: flex; flex-wrap: wrap; gap: 15px; justify-content: start; padding: 10px;";
+        const mainContainer = document.createElement('div');
+        let currentGrid = document.createElement('div');
+        currentGrid.className = "grid-a4";
+        mainContainer.appendChild(currentGrid);
         
         const daftarIdQr = [];
         let adaDataTerpilih = false;
+        let totalStikerDibuat = 0;
 
         for (let idx = 0; idx < checkboxes.length; idx++) {
             if (checkboxes[idx].checked) {
@@ -702,20 +786,29 @@
                 if(totalUnitAset <= 0) totalUnitAset = 1;
 
                 for (let i = 1; i <= totalUnitAset; i++) {
+                    if (totalStikerDibuat > 0 && totalStikerDibuat % 48 === 0) {
+                        currentGrid = document.createElement('div');
+                        currentGrid.className = "grid-a4";
+                        mainContainer.appendChild(currentGrid);
+                    }
+
                     const nomorUrutSufiks = i.toString().padStart(3, '0');
                     const nomorUnikSpesifik = `${item.no_inventaris || 'INV/KOSONG'}/${nomorUrutSufiks}`;
                     const idDivQr = `qr_kolektif_${id}_unit_${i}`;
                     
                     const kartuLabel = document.createElement('div');
-                    kartuLabel.style.cssText = "width: 180px; padding: 10px; border: 2px dashed #333; text-align: center; background: #fff; page-break-inside: avoid;";
+                    kartuLabel.className = "stiker-box";
                     kartuLabel.innerHTML = `
-                        <div style="font-size: 10px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">INVENTARIS SEKOLAH</div>
-                        <div style="font-size: 9px; font-weight: bold; margin: 5px 0; height: 25px; overflow: hidden; text-overflow: ellipsis;">${item.nama_barang}</div>
-                        <div id="${idDivQr}" style="display: flex; justify-content: center; margin: 8px 0;"></div>
-                        <div style="font-size: 8px; font-weight: bold; color: #0d6efd; font-family: monospace;">${nomorUnikSpesifik}</div>
+                        <div class="stiker-info">
+                            <div class="stiker-title">INVENTARIS SEKOLAH</div>
+                            <div class="stiker-name">${item.nama_barang}</div>
+                            <div class="stiker-code">${nomorUnikSpesifik}</div>
+                        </div>
+                        <div class="stiker-qr" id="${idDivQr}"></div>
                     `;
-                    kontainer.appendChild(kartuLabel);
+                    currentGrid.appendChild(kartuLabel);
                     daftarIdQr.push({ idElement: idDivQr, textQr: nomorUnikSpesifik });
+                    totalStikerDibuat++;
                 }
             }
         }
@@ -725,15 +818,15 @@
             return;
         }
 
-        printArea.appendChild(kontainer);
+        printArea.appendChild(mainContainer);
         
         daftarIdQr.forEach(target => {
-            new QRCode(document.getElementById(target.idElement), { text: target.textQr, width: 85, height: 85 });
+            new QRCode(document.getElementById(target.idElement), { text: target.textQr, width: 55, height: 55 });
         });
 
         setTimeout(() => {
-            const jendelaCetak = window.open('', '_blank', 'width=850,height=600');
-            jendelaCetak.document.write(`<html><head><title>Cetak Barcode Kolektif</title></head><body style="margin:0; background:#fff;">${printArea.innerHTML}<script>window.onload=function(){window.print();window.close();};<\/script></body></html>`);
+            const jendelaCetak = window.open('', '_blank', 'width=900,height=700');
+            jendelaCetak.document.write(`<html><head><title>Cetak Barcode Kolektif (A4-48)</title>${BUNDLE_STYLE_PRINT}</head><body>${printArea.innerHTML}<script>window.onload=function(){window.print();window.close();};<\/script></body></html>`);
             jendelaCetak.document.close();
         }, 600);
     }
