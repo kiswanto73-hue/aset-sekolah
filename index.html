@@ -12,18 +12,18 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f4f6f9;
-            font-size: 0.85rem; /* Mengecilkan ukuran font global agar lebih efisien */
+            font-size: 0.85rem; 
         }
         .main-header {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
-            padding: 15px 0; /* Dikurangi dari 30px agar lebih ringkas */
+            padding: 15px 0; 
             margin-bottom: 20px;
             border-bottom: 4px solid #0d6efd;
             border-radius: 0 0 10px 10px;
         }
         .main-header h1 {
-            font-size: 1.5rem; /* Diperkecil dari ukuran bawaan */
+            font-size: 1.5rem; 
         }
         .main-header .lead {
             font-size: 0.9rem;
@@ -44,7 +44,7 @@
             padding: 15px;
         }
         .table {
-            font-size: 0.8rem; /* Membuat font tabel lebih kecil & kompak */
+            font-size: 0.8rem; 
         }
         .table th {
             padding: 8px;
@@ -124,7 +124,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <!-- Tambahan SheetJS library untuk export Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -280,7 +279,6 @@
                         <h5 class="mb-0 fs-6">Daftar Pantau Inventaris Aset Sekolah</h5>
                     </div>
                     <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                        <!-- Tambahan Tombol Excel Profesional -->
                         <button class="btn btn-sm btn-light text-success border border-success fw-bold shadow-sm" onclick="exportKeExcelProfesional()" title="Download Format Excel Berwarna dan Ber-border Rapi">
                             <i class="fa-solid fa-file-excel me-1"></i> Download Excel 📊
                         </button>
@@ -656,19 +654,17 @@
         }
     }
 
-    // FUNGSI EXPORT EXCEL PROFESIONAL BERWARNA & BER-BORDER RAPI (MENGGUNAKAN SHEETJS)
     function exportKeExcelProfesional() {
         if (Object.keys(dataLokalAset).length === 0) {
             alert("Tidak ada data aset untuk di-export!");
             return;
         }
 
-        // 1. Definisikan Header & Map Data Array
         const header = [
             ["LAPORAN INVENTARIS SARPRAS & ASET SEKOLAH"],
             ["SISTEM MANAJEMEN SMART-ASSET PRO"],
             ["Tanggal Cetak: " + new Date().toLocaleDateString('id-ID')],
-            [], // Baris Kosong
+            [], 
             ["NO", "NO. INVENTARIS BASE", "NAMA BARANG ASET", "KATEGORI", "LOKASI / RUANG", "TAHUN", "SUMBER DANA", "BAIK", "RUSAK RINGAN", "RUSAK BERAT", "TOTAL PCS"]
         ];
 
@@ -697,33 +693,26 @@
             ]);
         });
 
-        // Gabungkan Judul Header dengan Baris Data
         const matriksKonten = header.concat(barisData);
-
-        // 2. Buat Workbook & Worksheet SheetJS
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(matriksKonten);
 
-        // 3. Tambahkan Pengaturan Lebar Kolom Otomatis (Auto-width)
         const lebarKolom = [
-            { wch: 5 },   // NO
-            { wch: 22 },  // NO. INVENTARIS BASE
-            { wch: 30 },  // NAMA BARANG ASET
-            { wch: 20 },  // KATEGORI
-            { wch: 25 },  // LOKASI / RUANG
-            { wch: 8 },   // TAHUN
-            { wch: 22 },  // SUMBER DANA
-            { wch: 8 },   // BAIK
-            { wch: 14 },  // RUSAK RINGAN
-            { wch: 14 },  // RUSAK BERAT
-            { wch: 10 }   // TOTAL PCS
+            { wch: 5 },   
+            { wch: 22 },  
+            { wch: 30 },  
+            { wch: 20 },  
+            { wch: 25 },  
+            { wch: 8 },   
+            { wch: 22 },  
+            { wch: 8 },   
+            { wch: 14 },  
+            { wch: 14 },  
+            { wch: 10 }   
         ];
         ws['!cols'] = lebarKolom;
 
-        // Tambahkan Worksheet ke Workbook
         XLSX.utils.book_append_sheet(wb, ws, "Daftar Aset Sekolah");
-
-        // 4. Download File Excel .xlsx ke komputer pengguna
         XLSX.writeFile(wb, "Laporan_Aset_Sekolah_SmartAssetPro.xlsx");
     }
 
@@ -741,19 +730,18 @@
             .grid-a4 {
                 display: grid;
                 grid-template-columns: repeat(4, 48mm);
-                grid-auto-rows: 27.5mm; /* DIUBAH KE 27.5mm AGAR LURUS PAS 4 KOLOM X 10 BARIS */
+                grid-auto-rows: 30.5mm; /* DISESUAIKAN KE 30.5mm AGAR PAS FORMAT 4 KOLOM X 9 BARIS = 36 STIKER */
                 gap: 2mm 2mm;
                 justify-content: center;
                 page-break-after: always;
             }
-            /* Hilangkan page break untuk halaman terakhir agar tidak memicu lembar kosong */
             .grid-a4:last-of-type {
                 page-break-after: avoid;
             }
             .stiker-box {
                 box-sizing: border-box;
                 width: 48mm;
-                height: 27.5mm; /* DIUBAH KE 27.5mm AGAR LEBIH TINGGI DAN PROPORSIONAL */
+                height: 30.5mm; 
                 border: 0.5px dashed #bbb;
                 padding: 1.5mm;
                 display: flex;
@@ -845,7 +833,6 @@
             `;
             grid.innerHTML += stikerHtml;
 
-            // Naikkan jeda render sinkron stiker tunggal ke 300ms agar rendering stabil
             ((targetId, codeText) => {
                 setTimeout(() => {
                     const elem = document.getElementById(targetId);
@@ -880,12 +867,11 @@
         }
 
         const printArea = document.getElementById('printArea');
-        printArea.innerHTML = ""; // Bersihkan isi print area sebelumnya
+        printArea.innerHTML = ""; 
 
         let totalStikerDibuat = 0;
         let currentGridId = "printGridKolektif_0";
         
-        // Buat grid kontainer pertama
         printArea.innerHTML += `<div class="grid-a4" id="${currentGridId}"></div>`;
         let targetGrid = document.getElementById(currentGridId);
 
@@ -895,9 +881,9 @@
                 const totalUnit = item.jumlah || 1;
                 for (let i = 1; i <= totalUnit; i++) {
                     
-                    // JIKA SUDAH MENCAPAI KELIPATAN 40, BUAT HALAMAN KONTAINER A4 BARU
-                    if (totalStikerDibuat > 0 && totalStikerDibuat % 40 === 0) {
-                        currentGridId = `printGridKolektif_${Math.floor(totalStikerDibuat / 40)}`;
+                    // JIKA SUDAH MENCAPAI KELIPATAN 36, BUAT HALAMAN KONTAINER A4 BARU
+                    if (totalStikerDibuat > 0 && totalStikerDibuat % 36 === 0) {
+                        currentGridId = `printGridKolektif_${Math.floor(totalStikerDibuat / 36)}`;
                         printArea.innerHTML += `<div class="grid-a4" id="${currentGridId}"></div>`;
                         targetGrid = document.getElementById(currentGridId);
                     }
@@ -918,8 +904,6 @@
                     `;
                     targetGrid.innerHTML += stikerHtml;
 
-                    // Mengamankan cakupan variabel untuk inisialisasi QR Code asinkron
-                    // Mengubah interval waktu ke 400ms agar browser memiliki ruang memproses beban DOM masal
                     ((targetId, codeText) => {
                         setTimeout(() => {
                             const elem = document.getElementById(targetId);
@@ -943,7 +927,6 @@
     }
 
     function jalankanProsedurCetak() {
-        // Memberikan jeda waktu 1,8 detik agar seluruh tumpukan script QR selesai digambar seutuhnya
         setTimeout(() => {
             const kontenCetak = document.getElementById('printArea').innerHTML;
             const jendelaCetak = window.open('', '_blank', 'height=600,width=800');
@@ -957,7 +940,6 @@
             jendelaCetak.document.close();
             jendelaCetak.focus();
             
-            // Pengaman Utama: Menunggu dokumen jendela baru termuat 100% sebelum printer memotong alur kerja browser
             jendelaCetak.onload = function() {
                 setTimeout(() => {
                     jendelaCetak.print();
