@@ -731,7 +731,7 @@
         <style>
             @page {
                 size: A4 portrait;
-                margin: 6mm 5mm 5mm 5mm;
+                margin: 8mm 6mm 6mm 6mm;
             }
             body {
                 margin: 0;
@@ -740,16 +740,20 @@
             }
             .grid-a4 {
                 display: grid;
-                grid-template-columns: repeat(4, 48.5mm);
-                grid-auto-rows: 23.5mm;
-                gap: 2mm 1.5mm;
+                grid-template-columns: repeat(4, 48mm);
+                grid-auto-rows: 25mm;
+                gap: 2mm 2mm;
                 justify-content: center;
                 page-break-after: always;
             }
+            /* Hilangkan page break untuk halaman terakhir agar tidak memicu lembar kosong */
+            .grid-a4:last-of-type {
+                page-break-after: avoid;
+            }
             .stiker-box {
                 box-sizing: border-box;
-                width: 48.5mm;
-                height: 23.5mm;
+                width: 48mm;
+                height: 25mm;
                 border: 0.5px dashed #bbb;
                 padding: 1.5mm;
                 display: flex;
@@ -812,7 +816,7 @@
                 height: auto !important;
             }
         </style>
-`;
+    `;
 
     function cetakStikerBarcode(id) {
         const item = dataLokalAset[id];
@@ -870,28 +874,30 @@
         }
 
         const printArea = document.getElementById('printArea');
-        printArea.innerHTML = `<div class="grid-a4" id="printGridKolektif"></div>`;
-        const grid = document.getElementById('printGridKolektif');
+        printArea.innerHTML = ""; // Bersihkan isi print area sebelumnya
 
         let totalStikerDibuat = 0;
+        let currentGridId = "printGridKolektif_0";
+        
+        // Buat grid kontainer pertama
+        printArea.innerHTML += `<div class="grid-a4" id="${currentGridId}"></div>`;
+        let targetGrid = document.getElementById(currentGridId);
 
         idTerpilih.forEach((id) => {
             const item = dataLokalAset[id];
             if (item) {
                 const totalUnit = item.jumlah || 1;
                 for (let i = 1; i <= totalUnit; i++) {
-                    totalStikerDibuat++;
+                    
+                    // JIKA sudah mencapai kelipatan 44, buat halaman kontainer A4 baru
+                    if (totalStikerDibuat > 0 && totalStikerDibuat % 44 === 0) {
+                        currentGridId = `printGridKolektif_${Math.floor(totalStikerDibuat / 44)}`;
+                        printArea.innerHTML += `<div class="grid-a4" id="${currentGridId}"></div>`;
+                        targetGrid = document.getElementById(currentGridId);
+                    }
+
                     const uniqueCode = `${item.no_inventaris}/${i}`;
                     const boxId = `qr_kol_${id}_${i}`;
-
-                    let targetGrid = grid;
-                    if (totalStikerDibuat > 1 && (totalStikerDibuat - 1) % 32 === 0) {
-                        const newGridId = `printGridKolektif_${Math.floor(totalStikerDibuat/32)}`;
-                        printArea.innerHTML += `<div class="grid-a4" id="${newGridId}"></div>`;
-                        targetGrid = document.getElementById(newGridId);
-                    } else if (totalStikerDibuat > 32) {
-                        targetGrid = document.getElementById(`printGridKolektif_${Math.floor((totalStikerDibuat - 1)/32)}`);
-                    }
 
                     const stikerHtml = `
                         <div class="stiker-box">
@@ -906,14 +912,22 @@
                     `;
                     targetGrid.innerHTML += stikerHtml;
 
-                    setTimeout(() => {
-                        new QRCode(document.getElementById(boxId), {
-                            text: uniqueCode,
-                            width: 64,
-                            height: 64,
-                            correctLevel: QRCode.CorrectLevel.M
-                        });
-                    }, 10);
+                    // Mengamankan cakupan variabel untuk inisialisasi QR Code asinkron
+                    ((targetId, codeText) => {
+                        setTimeout(() => {
+                            const elem = document.getElementById(targetId);
+                            if(elem) {
+                                new QRCode(elem, {
+                                    text: codeText,
+                                    width: 64,
+                                    height: 64,
+                                    correctLevel: QRCode.CorrectLevel.M
+                                });
+                            }
+                        }, 20);
+                    })(boxId, uniqueCode);
+
+                    totalStikerDibuat++;
                 }
             }
         });
@@ -938,8 +952,8 @@
             setTimeout(() => {
                 jendelaCetak.print();
                 jendelaCetak.close();
-            }, 300);
-        }, 600);
+            }, 500);
+        }, 800);
     }
 </script>
 </body>
