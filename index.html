@@ -741,7 +741,7 @@
             .grid-a4 {
                 display: grid;
                 grid-template-columns: repeat(4, 48mm);
-                grid-auto-rows: 25mm;
+                grid-auto-rows: 27.5mm; /* DIUBAH KE 27.5mm AGAR LURUS PAS 4 KOLOM X 10 BARIS */
                 gap: 2mm 2mm;
                 justify-content: center;
                 page-break-after: always;
@@ -753,7 +753,7 @@
             .stiker-box {
                 box-sizing: border-box;
                 width: 48mm;
-                height: 25mm;
+                height: 27.5mm; /* DIUBAH KE 27.5mm AGAR LEBIH TINGGI DAN PROPORSIONAL */
                 border: 0.5px dashed #bbb;
                 padding: 1.5mm;
                 display: flex;
@@ -845,14 +845,20 @@
             `;
             grid.innerHTML += stikerHtml;
 
-            setTimeout(() => {
-                new QRCode(document.getElementById(boxId), {
-                    text: uniqueCode,
-                    width: 64,
-                    height: 64,
-                    correctLevel: QRCode.CorrectLevel.M
-                });
-            }, 10);
+            // Naikkan jeda render sinkron stiker tunggal ke 300ms agar rendering stabil
+            ((targetId, codeText) => {
+                setTimeout(() => {
+                    const elem = document.getElementById(targetId);
+                    if(elem) {
+                        new QRCode(elem, {
+                            text: codeText,
+                            width: 64,
+                            height: 64,
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    }
+                }, 300);
+            })(boxId, uniqueCode);
         }
 
         jalankanProsedurCetak();
@@ -889,9 +895,9 @@
                 const totalUnit = item.jumlah || 1;
                 for (let i = 1; i <= totalUnit; i++) {
                     
-                    // JIKA sudah mencapai kelipatan 44, buat halaman kontainer A4 baru
-                    if (totalStikerDibuat > 0 && totalStikerDibuat % 44 === 0) {
-                        currentGridId = `printGridKolektif_${Math.floor(totalStikerDibuat / 44)}`;
+                    // JIKA SUDAH MENCAPAI KELIPATAN 40, BUAT HALAMAN KONTAINER A4 BARU
+                    if (totalStikerDibuat > 0 && totalStikerDibuat % 40 === 0) {
+                        currentGridId = `printGridKolektif_${Math.floor(totalStikerDibuat / 40)}`;
                         printArea.innerHTML += `<div class="grid-a4" id="${currentGridId}"></div>`;
                         targetGrid = document.getElementById(currentGridId);
                     }
@@ -913,6 +919,7 @@
                     targetGrid.innerHTML += stikerHtml;
 
                     // Mengamankan cakupan variabel untuk inisialisasi QR Code asinkron
+                    // Mengubah interval waktu ke 400ms agar browser memiliki ruang memproses beban DOM masal
                     ((targetId, codeText) => {
                         setTimeout(() => {
                             const elem = document.getElementById(targetId);
@@ -924,7 +931,7 @@
                                     correctLevel: QRCode.CorrectLevel.M
                                 });
                             }
-                        }, 20);
+                        }, 400);
                     })(boxId, uniqueCode);
 
                     totalStikerDibuat++;
@@ -936,6 +943,7 @@
     }
 
     function jalankanProsedurCetak() {
+        // Memberikan jeda waktu 1,8 detik agar seluruh tumpukan script QR selesai digambar seutuhnya
         setTimeout(() => {
             const kontenCetak = document.getElementById('printArea').innerHTML;
             const jendelaCetak = window.open('', '_blank', 'height=600,width=800');
@@ -949,11 +957,14 @@
             jendelaCetak.document.close();
             jendelaCetak.focus();
             
-            setTimeout(() => {
-                jendelaCetak.print();
-                jendelaCetak.close();
-            }, 500);
-        }, 800);
+            // Pengaman Utama: Menunggu dokumen jendela baru termuat 100% sebelum printer memotong alur kerja browser
+            jendelaCetak.onload = function() {
+                setTimeout(() => {
+                    jendelaCetak.print();
+                    jendelaCetak.close();
+                }, 600);
+            };
+        }, 1800);
     }
 </script>
 </body>
